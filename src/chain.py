@@ -45,7 +45,6 @@ Answer:"""
     )
     
     result = response.json()
-    print(f"API Response: {result}")  # Debug line
     return result["choices"][0]["message"]["content"]
 
 def research(question: str, index) -> dict:
