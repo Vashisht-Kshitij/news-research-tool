@@ -9,43 +9,57 @@ load_dotenv()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-def ask_llm(question: str, context_chunks: list) -> str:
+def ask_llm(question: str,context_chunks: list)->str:
     """
-    Send retrieved chunks as context to LLM and get an answer.
+    Send retrived chunks as context to LLM and get an answer.
     """
-    # Build context from retrieved chunks
     context = "\n\n".join([
         f"Source {i+1}: {chunk['text']}"
-        for i, chunk in enumerate(context_chunks)
+        for i,chunk in enumerate(context_chunks)
     ])
-    
-    prompt = f"""You are a helpful news research assistant.
-Answer the question based ONLY on the provided context.
-If the answer is not in the context, say "I cannot find this information in the provided articles."
 
-Context:
-{context}
+    prompt = f"""You are helpful news research assistant.
+    Answer the question based on the provided context.
+    If the answer is not in the context, say "I cannot find this information in the provided articles."
 
-Question: {question}
+    Context:
+    {context}
 
-Answer:"""
+    Question: {question}
 
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        },
-        json={
-            "model": "google/gemma-4-31b-it:free",
-            "messages": [
-                {"role": "user", "content": prompt}
-            ]
-        }
-    )
-    
-    result = response.json()
-    return result["choices"][0]["message"]["content"]
+    Answer:"""
+
+    try:
+        response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization":f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json = {
+                    "model":"google/gemma-4-31b-it:free",
+                    "messages":[
+                        {"role":"user","content": prompt}
+                    ]
+                },
+                timeout=30
+            )
+        result = response.json()
+
+        if "choices" not in result:
+            error_info = result.get("error",{})
+            error_code = error_info.get("code","unknown")
+
+            if error_code == 429:
+                return "The AI model is currently busy due to high demand,Please try again in a moment."
+            else:
+                return f"Something went wrong while generating the answer.Please try again."
+
+        return result["choices"][0]["message"]["content"]
+    except requests.exceptions.Timeout:
+        return "The request took too long.Please try again."
+    except requests.exceptions.RequestException as e:
+        return "Could not connect to the AI service.Please check your connection and try again."
 
 def research(question: str, index) -> dict:
     """
