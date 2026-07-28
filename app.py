@@ -65,10 +65,13 @@ else:
     if ask_button and question:
         with st.spinner("Searching and generating answer..."):
             chunks = retrieve_chunks(question, st.session_state.index, top_k=3)
-            answer = ask_llm(question, chunks)
+            response = ask_llm(question, chunks)
             
             st.subheader("Answer")
-            st.write(answer)
+            st.write(response["answer"])
+            
+            if response["model_used"]:
+                st.caption(f"Answered by: {response['model_used']}")
             
             st.subheader("Sources")
             sources = set(chunk["source"] for chunk in chunks)

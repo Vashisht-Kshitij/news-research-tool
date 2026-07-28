@@ -9,57 +9,77 @@ load_dotenv()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-def ask_llm(question: str,context_chunks: list)->str:
+def ask_llm(question: str, context_chunks: list) -> str:
     """
-    Send retrived chunks as context to LLM and get an answer.
+    Send retrieved chunks as context to LLM and get an answer.
+    Tries multiple models in order if earlier ones fail.
     """
     context = "\n\n".join([
         f"Source {i+1}: {chunk['text']}"
-        for i,chunk in enumerate(context_chunks)
+        for i, chunk in enumerate(context_chunks)
     ])
+    
+    prompt = f"""You are a helpful news research assistant.
+Answer the question based ONLY on the provided context.
+If the answer is not in the context, say "I cannot find this information in the provided articles."
 
-    prompt = f"""You are helpful news research assistant.
-    Answer the question based on the provided context.
-    If the answer is not in the context, say "I cannot find this information in the provided articles."
+Context:
+{context}
 
-    Context:
-    {context}
+Question: {question}
 
-    Question: {question}
+Answer:"""
 
-    Answer:"""
-
-    try:
-        response = requests.post(
+    # List of models to try, in order of preference
+    models_to_try = [
+        "google/gemma-4-31b-it:free",
+        "openai/gpt-oss-20b:free"
+    ]
+    
+    last_error = None
+    
+    for model in models_to_try:
+        try:
+            response = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={
-                    "Authorization":f"Bearer {OPENROUTER_API_KEY}",
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                     "Content-Type": "application/json"
                 },
-                json = {
-                    "model":"google/gemma-4-31b-it:free",
-                    "messages":[
-                        {"role":"user","content": prompt}
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "user", "content": prompt}
                     ]
                 },
                 timeout=30
             )
-        result = response.json()
-
-        if "choices" not in result:
-            error_info = result.get("error",{})
-            error_code = error_info.get("code","unknown")
-
-            if error_code == 429:
-                return "The AI model is currently busy due to high demand,Please try again in a moment."
+            
+            result = response.json()
+            
+            if "choices" in result:
+                return {
+                            "answer": result["choices"][0]["message"]["content"],
+                            "model_used": model
+                        }
             else:
-                return f"Something went wrong while generating the answer.Please try again."
-
-        return result["choices"][0]["message"]["content"]
-    except requests.exceptions.Timeout:
-        return "The request took too long.Please try again."
-    except requests.exceptions.RequestException as e:
-        return "Could not connect to the AI service.Please check your connection and try again."
+                # This model failed, log it and try next
+                error_info = result.get("error", {})
+                last_error = error_info.get("message", "Unknown error")
+                continue
+        
+        except requests.exceptions.Timeout:
+            last_error = "Request timed out"
+            continue
+        except requests.exceptions.RequestException as e:
+            last_error = str(e)
+            continue
+    
+    # If we reach here, all models failed
+    return {
+    "answer": f"All AI models are currently unavailable. Please try again in a few minutes. (Last error: {last_error})",
+    "model_used": None
+}
 
 def research(question: str, index) -> dict:
     """
@@ -69,11 +89,13 @@ def research(question: str, index) -> dict:
     chunks = retrieve_chunks(question, index, top_k=3)
     
     # Step 2: Generate answer using LLM
-    answer = ask_llm(question, chunks)
-    
+    response = ask_llm(question, chunks)
+    answer = response["answer"]
+    model = response["model_used"]
     return {
         "question": question,
         "answer": answer,
+        "model_used":model,
         "sources": [chunk["source"] for chunk in chunks],
         "chunks_used": len(chunks)
     }
