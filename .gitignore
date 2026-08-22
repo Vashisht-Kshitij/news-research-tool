@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 .DS_Store
 src/index_storage/
+vevn/
+venv/
