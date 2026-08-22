@@ -9,26 +9,45 @@ load_dotenv()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-def ask_llm(question: str, context_chunks: list) -> str:
+def format_history(chat_history: list) -> str:
     """
-    Send retrieved chunks as context to LLM and get an answer.
-    Tries multiple models in order if earlier ones fail.
+    Convert chat history list into a formatted string for the prompt.
+    """
+    history_text = ""
+    for entry in chat_history:
+        history_text += f"Q: {entry['question']}\n"
+        history_text += f"A: {entry['answer']}\n"
+        history_text += "\n"
+    return history_text
+
+
+def ask_llm(question: str, context_chunks: list, chat_history: list = None) -> dict:
+    """
+    Send retrieved chunks + conversation history as context to LLM.
     """
     context = "\n\n".join([
         f"Source {i+1}: {chunk['text']}"
         for i, chunk in enumerate(context_chunks)
     ])
     
+    history_text = format_history(chat_history) if chat_history else "No previous conversation."
+    
     prompt = f"""You are a helpful news research assistant.
 Answer the question based ONLY on the provided context.
+Use the previous conversation to understand follow-up questions and references like "that" or "it".
 If the answer is not in the context, say "I cannot find this information in the provided articles."
 
 Context:
 {context}
 
+Previous conversation:
+{history_text}
+
 Question: {question}
 
 Answer:"""
+
+    # ... rest of the function (models_to_try loop) stays exactly the same
 
     # List of models to try, in order of preference
     models_to_try = [

@@ -24,6 +24,9 @@ for i in range(num_urls):
 process_button = st.sidebar.button("process Articles")
 
 #Initialize session state
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+    
 if "index" not in st.session_state:
     st.session_state.index = None
 
@@ -57,7 +60,7 @@ if st.session_state.processed_urls:
 st.header("Ask a Question")
 
 if st.session_state.index is None:
-    st.info("AA and process articles from the sidebar first.")
+    st.info("Add and process articles from the sidebar first.")
 else:
     question = st.text_input("Your question:")
     ask_button = st.button("Get Answer")
@@ -65,8 +68,13 @@ else:
     if ask_button and question:
         with st.spinner("Searching and generating answer..."):
             chunks = retrieve_chunks(question, st.session_state.index, top_k=3)
-            response = ask_llm(question, chunks)
-            
+
+            chat_history = st.session_state.chat_history
+
+            response = ask_llm(question, chunks,chat_history = chat_history)
+
+            st.session_state.chat_history.append({"question" : question, "answer" : response["answer"]})
+
             st.subheader("Answer")
             st.write(response["answer"])
             
