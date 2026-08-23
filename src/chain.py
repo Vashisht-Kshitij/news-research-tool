@@ -51,8 +51,8 @@ Answer:"""
 
     # List of models to try, in order of preference
     models_to_try = [
-        "google/gemma-4-31b-it:free",
-        "openai/gpt-oss-20b:free"
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "z-ai/glm-5.2:free"
     ]
     
     last_error = None
