@@ -1,3 +1,5 @@
+import os
+os.environ["NLTK_DATA"] = "/tmp/nltk_data"
 import streamlit as st 
 import sys
 import os
