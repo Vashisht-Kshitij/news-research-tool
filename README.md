@@ -2,6 +2,8 @@
 
 Finding one specific fact in a long news article can be slow and frustrating, especially when researching across multiple sources. This tool lets users ask questions about an article and receive context-aware answers, eliminating the need to read the entire piece.
 
+**Live demo:** https://news-research-tool-9xq85i8pwzsuz3f4eic5rq.streamlit.app
+
 ## How It Works
 
 The user submits a news article URL through the Streamlit interface. The article is loaded in `loader.py`, where its content is extracted and split into smaller chunks to prepare it for embedding generation.
@@ -15,7 +17,7 @@ Finally, the retrieved context, along with the user's question and chat history,
 1. Can answer questions using information pulled from multiple articles at once, not just a single URL.
 2. Shows which article URL each answer was sourced from.
 3. Remembers previous questions and answers, so follow-up questions work naturally.
-4. Falls back automatically — tries Gemma first, then gpt-oss-20b if the first model fails to generate an answer.
+4. Falls back automatically across multiple free-tier models if one is unavailable.
 
 ## Setup
 
@@ -34,8 +36,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Create a `.env` file in the project root:
-
+Create a `.env` file in the project root and add your API key.
 
 ### 3. Run the app
 
